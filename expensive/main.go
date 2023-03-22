@@ -2,25 +2,31 @@ package main
 
 import (
 	"encoding/json"
-	"log"
-	"net/http"
-	"time"
-
 	"github.com/fiatjaf/relayer"
+	"github.com/fiatjaf/relayer/storage/elasticsearch"
 	"github.com/fiatjaf/relayer/storage/postgresql"
+	"github.com/fiatjaf/relayer/storage/sqlite3"
 	"github.com/kelseyhightower/envconfig"
 	_ "github.com/lib/pq"
 	"github.com/nbd-wtf/go-nostr"
+	"log"
+	"net/http"
+)
+
+const (
+	Elasticsearch = "elasticsearch"
+	Postgresql    = "postgresql"
+	Sqlite3       = "sqlite3"
 )
 
 type Relay struct {
-	PostgresDatabase string `envconfig:"POSTGRESQL_DATABASE"`
-	CLNNodeId        string `envconfig:"CLN_NODE_ID"`
-	CLNHost          string `envconfig:"CLN_HOST"`
-	CLNRune          string `envconfig:"CLN_RUNE"`
-	TicketPriceSats  int64  `envconfig:"TICKET_PRICE_SATS"`
-
-	storage *postgresql.PostgresBackend
+	StorageType     string `envconfig:"STORAGE_TYPE" required:"true" default:"sqlite3"` // elasticsearch, postgresql, sqlite3
+	StorageDB       string `envconfig:"STORAGE_DB" default:"./storage.db"`
+	CLNNodeID       string `envconfig:"CLN_NODE_ID"`
+	CLNHost         string `envconfig:"CLN_HOST"`
+	CLNRune         string `envconfig:"CLN_RUNE"`
+	TicketPriceSats int64  `envconfig:"TICKET_PRICE_SATS"`
+	storage         relayer.Storage
 }
 
 var r = &Relay{}
@@ -35,15 +41,7 @@ func (r *Relay) Storage() relayer.Storage {
 
 func (r *Relay) Init() error {
 	// every hour, delete all very old events
-	go func() {
-		db := r.Storage().(*postgresql.PostgresBackend)
-
-		for {
-			time.Sleep(60 * time.Minute)
-			db.DB.Exec(`DELETE FROM event WHERE created_at < $1`, time.Now().AddDate(0, -3, 0).Unix()) // 6 months
-		}
-	}()
-
+	go r.storage.Clean()
 	return nil
 }
 
@@ -60,14 +58,9 @@ func (r *Relay) AcceptEvent(evt *nostr.Event) bool {
 	if !checkInvoicePaidOk(evt.PubKey) {
 		return false
 	}
-
 	// block events that are too large
 	jsonb, _ := json.Marshal(evt)
-	if len(jsonb) > 100000 {
-		return false
-	}
-
-	return true
+	return len(jsonb) <= 100000
 }
 
 func main() {
@@ -76,8 +69,21 @@ func main() {
 		log.Fatalf("failed to read from env: %v", err)
 		return
 	}
-	r.storage = &postgresql.PostgresBackend{DatabaseURL: r.PostgresDatabase}
+	r.storage = driver(r.StorageType, r.StorageDB)
 	if err := relayer.Start(&r); err != nil {
 		log.Fatalf("server terminated: %v", err)
+	}
+}
+
+func driver(storageType, storageDB string) relayer.Storage {
+	switch storageType {
+	case Elasticsearch:
+		return &elasticsearch.Elasticsearch{}
+	case Postgresql:
+		return &postgresql.Postgres{DatabaseURL: storageDB}
+	case Sqlite3:
+		return &sqlite3.SQLite3{DatabaseURL: storageDB}
+	default:
+		return &sqlite3.SQLite3{DatabaseURL: storageDB}
 	}
 }

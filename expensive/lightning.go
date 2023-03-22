@@ -17,7 +17,7 @@ func generateInvoice(r *Relay, pubkey string) (string, error) {
 	cln := lnsocket.LNSocket{}
 	cln.GenKey()
 
-	err := cln.ConnectAndInit(r.CLNHost, r.CLNNodeId)
+	err := cln.ConnectAndInit(r.CLNHost, r.CLNNodeID)
 	if err != nil {
 		return "", err
 	}
@@ -30,11 +30,11 @@ func generateInvoice(r *Relay, pubkey string) (string, error) {
 	result, _ := cln.Rpc(r.CLNRune, "listinvoices", string(jparams))
 	if gjson.Get(result, "result.invoices.#").Int() == 1 {
 		timestamp := time.Now().Unix()
-		if (gjson.Get(result, "result.invoices.0.expires_at").Int() > timestamp) {
+		if gjson.Get(result, "result.invoices.0.expires_at").Int() > timestamp {
 			return gjson.Get(result, "result.invoices.0.bolt11").String(), nil
 		}
 		jparams, _ := json.Marshal(map[string]any{
-			"label": label,
+			"label":  label,
 			"status": "expired",
 		})
 		cln.Rpc(r.CLNRune, "delinvoice", string(jparams))
@@ -73,7 +73,7 @@ func checkInvoicePaidOk(pubkey string) bool {
 	cln := lnsocket.LNSocket{}
 	cln.GenKey()
 
-	err := cln.ConnectAndInit(r.CLNHost, r.CLNNodeId)
+	err := cln.ConnectAndInit(r.CLNHost, r.CLNNodeID)
 	if err != nil {
 		return false
 	}

@@ -3,19 +3,26 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"time"
-
 	"github.com/fiatjaf/relayer"
+	"github.com/fiatjaf/relayer/storage/elasticsearch"
 	"github.com/fiatjaf/relayer/storage/postgresql"
+	"github.com/fiatjaf/relayer/storage/sqlite3"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nbd-wtf/go-nostr"
+	"log"
+)
+
+const (
+	Elasticsearch = "elasticsearch"
+	Postgresql    = "postgresql"
+	Sqlite3       = "sqlite3"
 )
 
 type Relay struct {
-	PostgresDatabase string `envconfig:"POSTGRESQL_DATABASE"`
-
-	storage *postgresql.PostgresBackend
+	StorageType string   `envconfig:"STORAGE_TYPE" required:"true" default:"sqlite3"` // elasticsearch, postgresql, sqlite3
+	StorageDB   string   `envconfig:"STORAGE_DB" default:"./storage.db"`
+	Whitelist   []string `envconfig:"WHITELIST"`
+	storage     relayer.Storage
 }
 
 func (r *Relay) Name() string {
@@ -33,28 +40,19 @@ func (r *Relay) Init() error {
 	if err != nil {
 		return fmt.Errorf("couldn't process envconfig: %w", err)
 	}
-
-	// every hour, delete all very old events
-	go func() {
-		db := r.Storage().(*postgresql.PostgresBackend)
-
-		for {
-			time.Sleep(60 * time.Minute)
-			db.DB.Exec(`DELETE FROM event WHERE created_at < $1`, time.Now().AddDate(0, -3, 0).Unix()) // 3 months
-		}
-	}()
-
+	go r.Storage().Clean()
 	return nil
 }
 
 func (r *Relay) AcceptEvent(evt *nostr.Event) bool {
-	// block events that are too large
-	jsonb, _ := json.Marshal(evt)
-	if len(jsonb) > 10000 {
-		return false
+	// disallow anything from non-authorized pubkeys
+	for _, pubkey := range r.Whitelist {
+		if pubkey == evt.PubKey {
+			jsonb, _ := json.Marshal(evt)
+			return len(jsonb) <= 100000
+		}
 	}
-
-	return true
+	return false
 }
 
 func main() {
@@ -63,8 +61,21 @@ func main() {
 		log.Fatalf("failed to read from env: %v", err)
 		return
 	}
-	r.storage = &postgresql.PostgresBackend{DatabaseURL: r.PostgresDatabase}
+	r.storage = driver(r.StorageType, r.StorageDB)
 	if err := relayer.Start(&r); err != nil {
 		log.Fatalf("server terminated: %v", err)
+	}
+}
+
+func driver(storageType, storageDB string) relayer.Storage {
+	switch storageType {
+	case Elasticsearch:
+		return &elasticsearch.Elasticsearch{}
+	case Postgresql:
+		return &postgresql.Postgres{DatabaseURL: storageDB}
+	case Sqlite3:
+		return &sqlite3.SQLite3{DatabaseURL: storageDB}
+	default:
+		return &sqlite3.SQLite3{DatabaseURL: storageDB}
 	}
 }
