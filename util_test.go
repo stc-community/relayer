@@ -75,6 +75,10 @@ type testStorage struct {
 	saveEvent   func(*nostr.Event) error
 }
 
+func (st *testStorage) Clean() {
+	// TODO
+}
+
 func (st *testStorage) Init() error {
 	if fn := st.init; fn != nil {
 		return fn()

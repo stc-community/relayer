@@ -78,6 +78,8 @@ type Storage interface {
 	DeleteEvent(id string, pubkey string) error
 	// SaveEvent is called once Relay.AcceptEvent reports true.
 	SaveEvent(event *nostr.Event) error
+	// Clean is used to delete very old events
+	Clean()
 }
 
 // AdvancedQuerier methods are called before and after [Storage.QueryEvents].
