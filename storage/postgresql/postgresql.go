@@ -4,7 +4,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type PostgresBackend struct {
+type Postgres struct {
 	*sqlx.DB
 	DatabaseURL string
 }

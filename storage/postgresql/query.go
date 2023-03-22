@@ -12,7 +12,7 @@ import (
 	"github.com/nbd-wtf/go-nostr"
 )
 
-func (b PostgresBackend) QueryEvents(filter *nostr.Filter) (events []nostr.Event, err error) {
+func (b *Postgres) QueryEvents(filter *nostr.Filter) (events []nostr.Event, err error) {
 	var conditions []string
 	var params []any
 

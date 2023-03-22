@@ -6,7 +6,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func (b *PostgresBackend) Init() error {
+func (b *Postgres) Init() error {
 	db, err := sqlx.Connect("postgres", b.DatabaseURL)
 	if err != nil {
 		return err
