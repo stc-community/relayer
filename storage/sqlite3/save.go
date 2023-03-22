@@ -7,7 +7,7 @@ import (
 	"github.com/nbd-wtf/go-nostr"
 )
 
-func (b *SQLite3Backend) SaveEvent(evt *nostr.Event) error {
+func (b *SQLite3) SaveEvent(evt *nostr.Event) error {
 	// react to different kinds of events
 	if evt.Kind == nostr.KindSetMetadata || evt.Kind == nostr.KindContactList || (10000 <= evt.Kind && evt.Kind < 20000) {
 		// delete past events from this user
@@ -40,11 +40,11 @@ func (b *SQLite3Backend) SaveEvent(evt *nostr.Event) error {
 	return nil
 }
 
-func (b *SQLite3Backend) BeforeSave(evt *nostr.Event) {
+func (b *SQLite3) BeforeSave(evt *nostr.Event) {
 	// do nothing
 }
 
-func (b *SQLite3Backend) AfterSave(evt *nostr.Event) {
+func (b *SQLite3) AfterSave(evt *nostr.Event) {
 	// delete all but the 100 most recent ones for each key
 	b.DB.Exec(`DELETE FROM event WHERE pubkey = $1 AND kind = $2 AND created_at < (
       SELECT created_at FROM event WHERE pubkey = $1

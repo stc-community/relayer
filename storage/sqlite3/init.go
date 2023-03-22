@@ -6,7 +6,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func (b *SQLite3Backend) Init() error {
+func (b *SQLite3) Init() error {
 	db, err := sqlx.Connect("sqlite3", b.DatabaseURL)
 	if err != nil {
 		return err

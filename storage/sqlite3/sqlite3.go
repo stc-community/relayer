@@ -4,7 +4,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type SQLite3Backend struct {
+type SQLite3 struct {
 	*sqlx.DB
 	DatabaseURL string
 }

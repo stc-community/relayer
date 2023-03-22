@@ -12,7 +12,7 @@ import (
 	"github.com/nbd-wtf/go-nostr"
 )
 
-func (b SQLite3Backend) QueryEvents(filter *nostr.Filter) (events []nostr.Event, err error) {
+func (b *SQLite3) QueryEvents(filter *nostr.Filter) (events []nostr.Event, err error) {
 	var conditions []string
 	var params []any
 
