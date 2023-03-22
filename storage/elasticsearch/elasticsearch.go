@@ -45,19 +45,16 @@ var indexMapping = `
 }
 `
 
-type ElasticsearchStorage struct {
+type Elasticsearch struct {
 	IndexName string
-
-	es *elasticsearch.Client
-	bi esutil.BulkIndexer
+	es        *elasticsearch.Client
+	bi        esutil.BulkIndexer
 }
 
-func (ess *ElasticsearchStorage) Init() error {
-
+func (ess *Elasticsearch) Init() error {
 	if ess.IndexName == "" {
 		ess.IndexName = "events"
 	}
-
 	cfg := elasticsearch.Config{}
 	if x := os.Getenv("ES_URL"); x != "" {
 		cfg.Addresses = strings.Split(x, ",")
@@ -96,7 +93,7 @@ func (ess *ElasticsearchStorage) Init() error {
 	return nil
 }
 
-func (ess *ElasticsearchStorage) DeleteEvent(id string, pubkey string) error {
+func (ess *Elasticsearch) DeleteEvent(id string, pubkey string) error {
 	// todo: is pubkey match required?
 
 	done := make(chan error)
@@ -132,7 +129,7 @@ func (ess *ElasticsearchStorage) DeleteEvent(id string, pubkey string) error {
 	return err
 }
 
-func (ess *ElasticsearchStorage) SaveEvent(event *nostr.Event) error {
+func (ess *Elasticsearch) SaveEvent(event *nostr.Event) error {
 	ie := &IndexedEvent{
 		Event: *event,
 	}
@@ -182,4 +179,8 @@ func (ess *ElasticsearchStorage) SaveEvent(event *nostr.Event) error {
 
 	err = <-done
 	return err
+}
+
+func (ess *Elasticsearch) Clean() {
+	// TODO
 }

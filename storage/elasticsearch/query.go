@@ -86,7 +86,7 @@ func buildDsl(filter *nostr.Filter) ([]byte, error) {
 	return json.Marshal(esquery.Query(dsl))
 }
 
-func (ess *ElasticsearchStorage) getByID(filter *nostr.Filter) ([]nostr.Event, error) {
+func (ess *Elasticsearch) getByID(filter *nostr.Filter) ([]nostr.Event, error) {
 	got, err := ess.es.Mget(
 		esutil.NewJSONReader(filter),
 		ess.es.Mget.WithIndex(ess.IndexName))
@@ -114,7 +114,7 @@ func (ess *ElasticsearchStorage) getByID(filter *nostr.Filter) ([]nostr.Event, e
 	return events, nil
 }
 
-func (ess *ElasticsearchStorage) QueryEvents(filter *nostr.Filter) ([]nostr.Event, error) {
+func (ess *Elasticsearch) QueryEvents(filter *nostr.Filter) ([]nostr.Event, error) {
 	if filter == nil {
 		return nil, errors.New("filter cannot be null")
 	}
